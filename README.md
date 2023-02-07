@@ -1,4 +1,4 @@
-# Lipschitz SLL Networks
+# Lipschitz SLL Networks - ICLR 2023
 
 
 The official implementation of the paper "[A Unified Algebraic Perspective on Lipschitz Neural Networks](https://openreview.net/forum?id=k71IGLC8cfc)"
@@ -14,7 +14,7 @@ Experiments done with Pytorch 1.10
 #### train & evaluation
 ```
 # training
-mkdir trained_model/small_model
+mkdir -p trained_model/small_model
 torchrun --standalone --nnodes=1 --nproc_per_node=gpu main.py --dataset cifar10 --model-name small --train_dir small_model 
 
 # Evaluation
@@ -22,7 +22,7 @@ python3 main.py --mode certified --dataset cifar10 --model-name small --train_di
 ```
 
 #### Reproducing CIFAR10/100 results from the paper
-- Download the checkpoints [here](https://www.google.com)
+- Download the checkpoints [here](https://drive.google.com/file/d/1fUamevS89mn0gDlTIY40N8SfRtWAWlif/view?usp=share_link)
 
 ```
 python3 reproduce_tables.py
