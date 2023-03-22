@@ -14,7 +14,6 @@ Experiments done with Pytorch 1.10
 #### train & evaluation
 ```
 # training
-mkdir -p trained_model/small_model
 torchrun --standalone --nnodes=1 --nproc_per_node=gpu main.py --dataset cifar10 --model-name small --train_dir small_model 
 
 # Evaluation
