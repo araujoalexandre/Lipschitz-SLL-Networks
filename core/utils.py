@@ -15,7 +15,7 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from torch.optim import lr_scheduler
 from advertorch import attacks
-from autoattack import AutoAttack
+# from autoattack import AutoAttack
 import pytorch_warmup as warmup
 
 

@@ -70,10 +70,7 @@ class Evaluator:
     self.load_ckpt()
     if self.config.mode == "certified":
       for eps in [36, 72, 108, 255]:
-        if self.config.last_layer == 'lln':
-          self.eval_certified_lln(eps)
-        else:
-          self.eval_certified(eps)
+        self.eval_certified(eps)
     elif self.config.mode == "attack":
       self.eval_attack()
 
@@ -88,37 +85,7 @@ class Evaluator:
     running_inputs = 0
     lip_cst = 1.
     data_loader, _ = self.reader.load_dataset()
-    for batch_n, data in enumerate(data_loader):
-      inputs, labels = data
-      inputs, labels = inputs.cuda(), labels.cuda()
-      outputs = self.model(inputs)
-      predicted = outputs.argmax(axis=1)
-      correct = outputs.max(1)[1] == labels
-      margins = torch.sort(outputs, 1)[0]
-      certified = (margins[:, -1] - margins[:, -2]) > np.sqrt(2.) * lip_cst * eps_float
-      running_accuracy += predicted.eq(labels.data).cpu().sum().numpy()
-      running_certified += torch.sum(correct & certified).item()
-      running_inputs += inputs.size(0)
-    self.model.train()
-    accuracy = running_accuracy / running_inputs
-    certified = running_certified / running_inputs
-    self.message.add('eps', [eps, 255], format='.0f')
-    self.message.add('eps', eps_float, format='.5f')
-    self.message.add('accuracy', accuracy, format='.5f')
-    self.message.add('certified accuracy', certified, format='.5f')
-    logging.info(self.message.get_message())
-    return accuracy, certified
-
-  @torch.no_grad()
-  def eval_certified_lln(self, eps):
-    eps_float = eps / 255
-    self.model.eval()
-    running_accuracy = 0
-    running_certified = 0
-    running_inputs = 0
-    lip_cst = 1.
-    data_loader, _ = self.reader.load_dataset()
-    last_weight = self.model.module.model.last_last.weight
+    last_weight = self.model.module.model.model[-1].weight
     normalized_weight = F.normalize(last_weight, p=2, dim=1)
     for batch_n, data in enumerate(data_loader):
       inputs, labels = data

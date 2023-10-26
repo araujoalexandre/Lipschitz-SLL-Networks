@@ -15,37 +15,30 @@ class Config:
   def __init__(self, dataset, size):
     self.mode = 'certified'
     self.dataset = dataset
-    self.data_dir = '/gpfsscratch/rech/yxj/uuc79vj/data:/gpfswork/rech/yxj/uuc79vj/data:/gpfswork/rech/yxj/uuc79vj/data/vision_datasets:/gpfsdswork/dataset'
     self.ngpus = 4
     self.batch_size = 500
     self.shift_data = True
-    self.first_layer = 'padding_channels'
-    if dataset in ['cifar100', 'tiny-imagenet']:
-      self.last_layer = 'lln' 
-    else:
-      self.last_layer = 'pooling_linear'
 
     if size == 'small':
-      config = self.set_archi(20, 45, 7, 2048)
+      config = self.set_archi(20, 7, 45, 2048)
     elif size == 'medium':
-      config = self.set_archi(30, 60, 10, 2048)
+      config = self.set_archi(30, 10, 60, 2048)
     elif size == 'large':
-      config = self.set_archi(50, 90, 10, 2048)
+      config = self.set_archi(50, 10, 90, 2048)
     elif size == 'xlarge':
-      config = self.set_archi(70, 120, 15, 2048)
+      config = self.set_archi(70, 15, 120, 2048)
 
-  def set_archi(self, depth, num_channels, depth_linear, n_features):
-    self.depth = depth
-    self.num_channels = num_channels
-    self.depth_linear = depth_linear
-    self.n_features = n_features
-    self.conv_size = 5
+  def set_archi(self, n_conv, n_dense, w, dense_inner_dim):
+    self.n_conv = n_conv
+    self.n_dense = n_dense
+    self.conv_inner_dim = 5
+    self.dense_inner_dim = dense_inner_dim
+    self.w = w
 
 
 def load_ckpt(model, ckpt_path):
   checkpoint = torch.load(ckpt_path)['model_state_dict']
   model.load_state_dict(checkpoint)
-
 
 @torch.no_grad()
 def eval_certified(model, reader):
@@ -55,32 +48,7 @@ def eval_certified(model, reader):
   running_inputs = 0
   lip_cst = 1.
   data_loader, _ = reader.load_dataset()
-  for batch_n, data in enumerate(data_loader):
-    inputs, labels = data
-    inputs, labels = inputs.cuda(), labels.cuda()
-    outputs = model(inputs)
-    predicted = outputs.argmax(axis=1)
-    correct = outputs.max(1)[1] == labels
-    margins = torch.sort(outputs, 1)[0]
-    running_accuracy += predicted.eq(labels.data).cpu().sum().numpy()
-    for i, eps in enumerate([36, 72, 108, 255]):
-      eps_float = eps / 255
-      certified = (margins[:, -1] - margins[:, -2]) > np.sqrt(2.) * lip_cst * eps_float
-      running_certified[i] += torch.sum(correct & certified).item()
-    running_inputs += inputs.size(0)
-  accuracy = running_accuracy / running_inputs
-  certified = running_certified / running_inputs
-  return accuracy, certified
-
-@torch.no_grad()
-def eval_certified_lln(model, reader):
-  model.eval()
-  running_accuracy = 0
-  running_certified = torch.zeros(4)
-  running_inputs = 0
-  lip_cst = 1.
-  data_loader, _ = reader.load_dataset()
-  last_weight = model.module.model.last_last.weight
+  last_weight = model.module.model.model[-1].weight
   normalized_weight = F.normalize(last_weight, p=2, dim=1)
   for batch_n, data in enumerate(data_loader):
     inputs, labels = data
@@ -118,6 +86,7 @@ def main():
   message = utils.MessageBuilder()
 
   for dataset in datasets:
+
     print(f'-- Evaluation on {dataset} --')
     print('+-----------------------------------------------+')
     print('| {:>5}  |  {:>5}  |  {:>5}  |  {:>5}  |  {:>5} |'.format(
@@ -131,7 +100,7 @@ def main():
 
       # load reader
       Reader = readers_config[dataset]
-      reader = Reader(config, batch_size, False, is_training=False)
+      reader = Reader(config, 256, False, is_training=False)
       config.means = reader.means
 
       # load model
@@ -144,10 +113,7 @@ def main():
       avg_certified = torch.zeros(4)
       for ckpt_path in paths:
         load_ckpt(model, ckpt_path)
-        if not config.last_layer == 'lln':
-          accuracy, certified = eval_certified(model, reader)
-        else:
-          accuracy, certified = eval_certified_lln(model, reader)
+        accuracy, certified = eval_certified(model, reader)
         avg_accuracy += accuracy
         avg_certified += certified
 

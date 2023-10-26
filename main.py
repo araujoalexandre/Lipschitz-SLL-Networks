@@ -34,7 +34,6 @@ if __name__ == '__main__':
   parser.add_argument("--dataset", type=str,  default='cifar10', help="Dataset to use")
 
   parser.add_argument("--shift_data", type=bool, default=True, help="Shift dataset with mean.")
-  parser.add_argument("--normalize_data", action='store_true', help="Normalize dataset.")
 
   parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs for training.")
   parser.add_argument("--loss", type=str, default="xent", help="Define the loss to use for training.")
@@ -66,37 +65,33 @@ if __name__ == '__main__':
 
   # parameters of the architectures
   parser.add_argument("--model-name", type=str)
-  parser.add_argument("--depth", type=int, default=30)
-  parser.add_argument("--num_channels", type=int, default=30)
-  parser.add_argument("--depth_linear", type=int, default=5)
-  parser.add_argument("--n_features", type=int, default=2048)
-  parser.add_argument("--conv_size", type=int, default=5)
-  parser.add_argument("--init", type=str, default='xavier_normal')
-
-  parser.add_argument("--first_layer", type=str, default="padding_channels")
-  parser.add_argument("--last_layer", type=str, default="pooling_linear")
+  parser.add_argument("--w", type=int, default=1)
+  parser.add_argument("--conv_inner_dim", type=int, default=5)
+  parser.add_argument("--dense_inner_dim", type=int, default=-1)
+  parser.add_argument("--n_conv", type=int, default=30, help="The depth of the Stable Resnet")
+  parser.add_argument("--n_dense", type=int, default=5, help="The number of linear layers.")
 
   # parse all arguments 
   config = parser.parse_args()
   config.cmd = f"python3 {' '.join(sys.argv)}"
 
-  def override_args(config, depth, num_channels, depth_linear, n_features):
-    config.depth = depth
-    config.num_channels = num_channels
-    config.depth_linear = depth_linear
-    config.n_features = n_features
+  def override_args(config, n_conv, n_dense, w, dense_inner_dim):
+    config.n_conv = n_conv
+    config.n_dense = n_dense
+    config.w = w
+    config.dense_inner_dim = dense_inner_dim
     return config
 
   if config.model_name == 'small':
-    config = override_args(config, 20, 45, 7, 2048)
+    config = override_args(config, 20, 7, 45, 2048)
   elif config.model_name == 'medium':
-    config = override_args(config, 30, 60, 10, 2048)
+    config = override_args(config, 30, 10, 60, 2048)
   elif config.model_name == 'large':
-    config = override_args(config, 50, 90, 10, 2048)
+    config = override_args(config, 50, 10, 90, 2048)
   elif config.model_name == 'xlarge':
-    config = override_args(config, 70, 120, 15, 2048)
+    config = override_args(config, 70, 15, 120, 2048)
   elif config.model_name is None and \
-      not all([config.depth, config.num_channels, config.depth_linear, config.n_features]):
+      not all([config.n_conv, config.n_dense, config.w, config.dense_inner_dim]):
     ValueError("Choose --model-name 'small' 'medium' 'large' 'xlarge'")
 
   # process argments

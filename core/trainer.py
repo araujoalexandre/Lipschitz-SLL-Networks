@@ -15,7 +15,6 @@ from core.models.model import NormalizedModel, LipschitzNetwork
 from core.data.readers import readers_config
 
 import numpy as np
-import geoopt
 import torch
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn

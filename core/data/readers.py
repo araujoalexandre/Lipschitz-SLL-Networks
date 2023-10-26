@@ -23,18 +23,6 @@ class BaseReader:
     self.is_distributed = is_distributed
     self.num_workers = 10
     self.prefetch_factor = self.batch_size * 2
-    self.path = join(self.get_data_dir(), self.config.dataset)
-
-  def get_data_dir(self):
-    paths = self.config.data_dir.split(':')
-    data_dir = None
-    for path in paths:
-      if exists(join(path, self.config.dataset)):
-        data_dir = path
-        break
-    if data_dir is None:
-      raise ValueError("Data directory not found.")
-    return data_dir
 
   def transform(self):
     """Create the transformer pipeline."""
@@ -101,7 +89,7 @@ class CIFAR10Reader(CIFARReader):
       self.means = (0.4913, 0.4821, 0.4465)
 
     transform = self.transform()
-    self.dataset = CIFAR10(self.path, train=self.is_training,
+    self.dataset = CIFAR10('./data', train=self.is_training,
                            download=False, transform=transform)
 
 
@@ -117,9 +105,8 @@ class CIFAR100Reader(CIFARReader):
       self.means = (0.5071, 0.4865, 0.4409)
 
     transform = self.transform()
-    self.dataset = CIFAR100(self.path, train=self.is_training,
+    self.dataset = CIFAR100('./data', train=self.is_training,
                            download=False, transform=transform)
-
 
 class TinyImageNetReader(BaseReader):
 
@@ -165,14 +152,17 @@ class TinyImageNetReader(BaseReader):
     return transform
 
 
-
+readers_config = {
+  'cifar10': CIFAR10Reader,
+  'cifar100': CIFAR100Reader,
+  'tiny-imagenet': TinyImageNetReader
+}
 
 
 
 readers_config = {
   'cifar10': CIFAR10Reader,
   'cifar100': CIFAR100Reader,
-  'tiny-imagenet': TinyImageNetReader
 }
 
 

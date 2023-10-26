@@ -23,11 +23,11 @@ class LipschitzNetwork(nn.Module):
   def __init__(self, config, n_classes):
     super(LipschitzNetwork, self).__init__()
 
-    self.depth = config.depth
-    self.num_channels = config.num_channels
-    self.depth_linear = config.depth_linear
-    self.n_features = config.n_features
-    self.conv_size = config.conv_size
+    self.n_conv= config.n_conv
+    self.n_dense = config.n_dense
+    self.cin = config.w
+    self.conv_inner_dim = config.conv_inner_dim
+    self.dense_inner_dim = config.dense_inner_dim
     self.n_classes = n_classes
 
     if config.dataset == 'tiny-imagenet':
@@ -35,40 +35,29 @@ class LipschitzNetwork(nn.Module):
     else:
       imsize = 32
 
-    self.conv1 = PaddingChannels(self.num_channels, 3, "zero")
+    self.model = []
+    self.model.append(
+      PaddingChannels(self.cin, 3, "zero")
+    )
 
-    layers = []
-    block_conv = SDPBasedLipschitzConvLayer
-    block_lin = SDPBasedLipschitzLinearLayer
-
-    for _ in range(self.depth):
-      layers.append(block_conv(config, (1, self.num_channels, imsize, imsize), self.num_channels, self.conv_size))
+    for _ in range(self.n_conv):
+      self.model.append(SDPBasedLipschitzConvLayer(self.cin, self.conv_inner_dim))
     
+    self.model.append(nn.AvgPool2d(4, divisor_override=4))
 
-    layers.append(nn.AvgPool2d(4, divisor_override=4))
-    self.stable_block = nn.Sequential(*layers)
-
-    layers_linear = [nn.Flatten()]
+    self.model.append(nn.Flatten())
     if config.dataset in ['cifar10', 'cifar100']:
-      in_channels = self.num_channels * 8 * 8
+      in_channels = self.cin * 8 * 8
     elif config.dataset == 'tiny-imagenet':
-      in_channels = self.num_channels * 16 * 16
+      in_channels = self.cin * 16 * 16
 
-    for _ in range(self.depth_linear):
-      layers_linear.append(block_lin(config, in_channels, self.n_features))
+    for _ in range(self.n_dense):
+      self.model.append(SDPBasedLipschitzLinearLayer(in_channels, self.dense_inner_dim))
 
-    if config.last_layer == 'pooling_linear':
-      self.last_last = PoolingLinear(in_channels, self.n_classes, agg="trunc")
-    elif config.last_layer == 'lln':
-      self.last_last = LinearNormalized(in_channels, self.n_classes)
-    else:
-      raise ValueError("Last layer not recognized")
-
-
-    self.layers_linear = nn.Sequential(*layers_linear)
-    self.base = nn.Sequential(*[self.conv1, self.stable_block, self.layers_linear])
+    self.model.append(LinearNormalized(in_channels, self.n_classes))
+    self.model = nn.Sequential(*self.model)
 
   def forward(self, x):
-    return self.last_last(self.base(x))
+    return self.model(x)
 
 
