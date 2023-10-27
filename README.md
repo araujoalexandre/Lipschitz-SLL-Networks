@@ -21,7 +21,7 @@ python3 main.py --mode certified --dataset cifar10 --model-name small --train_di
 ```
 
 #### Reproducing CIFAR10/100 results from the paper
-- Download the checkpoints [here](https://drive.google.com/file/d/1fUamevS89mn0gDlTIY40N8SfRtWAWlif/view?usp=share_link)
+- Download the checkpoints [here](https://drive.google.com/file/d/1-N8tSX_hDswnSszm6VPnBZwj-m0oaFxe/view?usp=sharing)
 
 ```
 python3 reproduce_tables.py
